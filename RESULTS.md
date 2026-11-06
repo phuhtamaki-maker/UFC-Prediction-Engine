@@ -51,3 +51,23 @@ Sääntö ei ole tuottava tällä testijaksolla. Historialliset avauskertoimet e
 7. Vertaillaan eri riskirajoja ja vetoihin vaadittavaa etua **vain kehitys-/validointiaineistolla**, ei jälkikäteen parhaan tuloksen metsästämiseksi testijoukosta.
 
 *Tämä dokumentti kuvaa todennettuja historiallisen ohjelma-ajon tuloksia, ei sijoituslupausta tai lääketieteellistä diagnoosia.*
+
+
+## 6.11.2026 – Aikajärjestyksessä erillisellä validoinnilla tehty kalibrointi
+
+- Menetelmä: symmetrinen temperature scaling; lämpötilaksi valikoitui **0,8** käyttämällä ainoastaan vuoden 2024 validointia.
+- Vuoden 2025–2026 erillinen testijoukko: **948 ottelua**.
+- Brier ennen **0,2305**, kalibroinnin jälkeen **0,2298** (pienempi parempi).
+- Log loss ennen **0,6532**, kalibroinnin jälkeen **0,6517** (pienempi parempi).
+- Kalibroidun mallin simuloitu vetostrategia: **745 vetoa**, tuotto **−21,56 yksikköä**, ROI **−2,89 %**.
+- Markkinavertailu samoilla **937 ottelulla**: kalibroitu malli Brier **0,2287**, marginaalista puhdistettu avauskerroin Brier **0,2094**. Markkina edelleen parempi.
+- Tulos vahvistettu GitHub Actions -lokista: https://github.com/phuhtamaki-maker/UFC-Prediction-Engine/actions/runs/42289945148
+
+**Johtopäätös:** Kalibrointi paransi mitattua todennäköisyyslaatua, mutta vedonlyönti oli edelleen tappiollista. Myös lisäoptimointi juuri näiden 2025–2026 testitulosten mukaan vääristäisi tuloksia: uudet muutokset on testattava erillisillä tulevilla otteluilla tai huolellisesti rakennetuilla ajallisilla vertailuilla.
+
+## Julkiset valmistautumistiedot
+
+- `fighter_context.py` varmistaa, että dokumentti on julkaistu ennen ottelua, lähde on yksilöity ja tapahtumatyyppi kuuluu rajattuun, objektiiviseen luetteloon.
+- `data/public_context_2026-11-07.csv` sisältää UFC:n omiin ennakkoilmoituksiin perustuvia muutoksia 7.11.2026 ottelukorttiin. Tiedot ovat **kontekstia**, eivät automaattisia terveys- tai voittotodennäköisyysarvioita.
+- Lähteet: https://www.ufc.com/news/updates-ufc-fight-night-cortes-acosta-vs-walker ja https://www.ufc.com/news/ufc-fight-night-bonfim-vs-brady-updates
+- Yksityisiä terveystietoja, diagnosoimattomia ongelmia, väitteitä henkilökohtaisista kriiseistä tai huhuja **ei kerätä**.
