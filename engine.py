@@ -20,10 +20,12 @@ from selective_evaluation import confidence_report
 from market_blend import fit_model_weight, mix_probabilities
 
 DATA_URL = "https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_fights_wide.csv"
+# Keep the more reliable 10-feature baseline active. The two extended
+# features are still computed for *research only* after a weaker 9-year result.
 FEATURES = ["elo_diff", "win_rate_diff", "ufc_fights_diff", "ko_losses_diff",
             "recent_ko_diff", "days_since_ko_diff", "rest_days_diff",
-            "age_diff", "reach_diff", "height_diff",
-            "recent_form_diff", "opponent_quality_diff"]
+            "age_diff", "reach_diff", "height_diff"]
+EXPERIMENTAL_FEATURES = FEATURES + ["recent_form_diff", "opponent_quality_diff"]
 
 def num(value):
     try:
@@ -101,7 +103,7 @@ def prepared_rows(df):
             # Deterministic listing randomization avoids f1-is-usually-winner label leakage.
             identity = f'{row.get("fight_id", "")}|{a}|{b}|{timestamp}'
             if int(hashlib.sha256(identity.encode()).hexdigest()[:8], 16) % 2:
-                for feat in FEATURES:
+                for feat in EXPERIMENTAL_FEATURES:
                     sample[feat] *= -1
                 sample["f1_name"], sample["f2_name"] = sample["f2_name"], sample["f1_name"]
                 sample["f1_open"], sample["f2_open"] = sample["f2_open"], sample["f1_open"]
