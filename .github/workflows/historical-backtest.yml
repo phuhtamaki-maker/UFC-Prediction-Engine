@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/historical-backtest.yml"
       - "engine.py"
+      - "calibration.py"
       - "requirements.txt"
 jobs:
   historical-backtest:
