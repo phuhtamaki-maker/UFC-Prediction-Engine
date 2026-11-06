@@ -57,6 +57,30 @@ class FrozenScoringTests(unittest.TestCase):
         self.assertEqual(result["completed_scored"], 0)
         self.assertEqual(result["fights"][0]["status"], "ambiguous_duplicate_result")
 
+    def test_rejects_forged_post_cutoff_snapshot(self):
+        data = json.loads(self.manifest.read_text())
+        data["generated_utc"] = "2026-11-07T13:00:00Z"
+        data["cutoff_utc"] = "2026-11-07T12:00:00Z"
+        self.manifest.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, "Post-cutoff"):
+            score(self.frozen, self.manifest, self.results)
+
+    def test_rejects_fight_before_cutoff_date(self):
+        data = json.loads(self.manifest.read_text())
+        data["generated_utc"] = "2026-11-06T21:00:00Z"
+        data["cutoff_utc"] = "2026-11-08T12:00:00Z"
+        self.manifest.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, "before UTC cutoff"):
+            score(self.frozen, self.manifest, self.results)
+
+    def test_valid_manifest_chronology_is_checked(self):
+        data = json.loads(self.manifest.read_text())
+        data["generated_utc"] = "2026-11-06T21:00:00Z"
+        data["cutoff_utc"] = "2026-11-07T12:00:00Z"
+        self.manifest.write_text(json.dumps(data))
+        result = score(self.frozen, self.manifest, self.results)
+        self.assertTrue(result["snapshot_chronology_checked"])
+
     def test_invalid_probability_rejected(self):
         df = pd.read_csv(self.frozen)
         df.loc[0, "p_fighter_1"] = .90
