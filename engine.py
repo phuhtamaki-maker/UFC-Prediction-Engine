@@ -15,6 +15,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, brier_score_loss, log_loss
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+from calibration import apply_temperature, fit_temperature
 
 DATA_URL = "https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_fights_wide.csv"
 FEATURES = ["elo_diff", "win_rate_diff", "ufc_fights_diff", "ko_losses_diff",
@@ -188,14 +189,23 @@ def run(fights, out_dir="results", train_end="2024-01-01", valid_end="2025-01-01
     model = train_model(train)
     validation_probability = model.predict_proba(validation[FEATURES].to_numpy(float))[:, 1]
     test_probability = model.predict_proba(test[FEATURES].to_numpy(float))[:, 1]
+    temperature = fit_temperature(validation_probability, validation.y.to_numpy(int))
+    calibrated_test = apply_temperature(test_probability, temperature)
     elo_probability = 1 / (1 + 10 ** (-test.elo_diff.to_numpy(float)))
     report = dict(train_n=len(train),
                   validation=metrics(validation.y.to_numpy(int), validation_probability),
                   test=metrics(test.y.to_numpy(int), test_probability),
+                  calibration=dict(method="validation-only temperature scaling",
+                                   temperature=temperature,
+                                   validation_calibrated=metrics(validation.y.to_numpy(int),
+                                       apply_temperature(validation_probability, temperature)),
+                                   test_calibrated=metrics(test.y.to_numpy(int), calibrated_test),
+                                   market_comparison=market_comparison(test, calibrated_test),
+                                   backtest=roi_report(test, calibrated_test)),
                   test_elo_baseline=metrics(test.y.to_numpy(int), elo_probability),
                   market_baseline=market_comparison(test, test_probability),
                   opening_odds_backtest=roi_report(test, test_probability),
-                  limitations=["No independent calibration yet",
+                  limitations=["Calibration uses 2024 validation only; needs forward re-validation",
                                "No documented weight-cut observations yet",
                                "KO/TKO is a proxy, not a brain-injury diagnosis",
                                "Historical opening odds may not have been executable"])
@@ -204,6 +214,7 @@ def run(fights, out_dir="results", train_end="2024-01-01", valid_end="2025-01-01
     (path / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     predictions = test[["event_date", "f1_name", "f2_name", "y"]].copy()
     predictions["p_f1"] = test_probability
+    predictions["p_f1_calibrated"] = calibrated_test
     predictions.to_csv(path / "out_of_sample_predictions.csv", index=False)
     return report
 
