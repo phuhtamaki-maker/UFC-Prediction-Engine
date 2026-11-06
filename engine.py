@@ -17,6 +17,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from calibration import apply_temperature, fit_temperature
 from selective_evaluation import confidence_report
+from market_blend import fit_model_weight, mix_probabilities
 
 DATA_URL = "https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_fights_wide.csv"
 FEATURES = ["elo_diff", "win_rate_diff", "ufc_fights_diff", "ko_losses_diff",
@@ -192,6 +193,12 @@ def run(fights, out_dir="results", train_end="2024-01-01", valid_end="2025-01-01
     test_probability = model.predict_proba(test[FEATURES].to_numpy(float))[:, 1]
     temperature = fit_temperature(validation_probability, validation.y.to_numpy(int))
     calibrated_test = apply_temperature(test_probability, temperature)
+    validation_market = market_open_probabilities(validation)
+    test_market = market_open_probabilities(test)
+    blend_fit = fit_model_weight(validation.y.to_numpy(int),
+                                 apply_temperature(validation_probability, temperature),
+                                 validation_market)
+    blended_test = mix_probabilities(calibrated_test, test_market, blend_fit["model_weight"])
     elo_probability = 1 / (1 + 10 ** (-test.elo_diff.to_numpy(float)))
     report = dict(train_n=len(train),
                   confidence_diagnostics=confidence_report(test.y.to_numpy(int), calibrated_test,
@@ -205,6 +212,13 @@ def run(fights, out_dir="results", train_end="2024-01-01", valid_end="2025-01-01
                                    test_calibrated=metrics(test.y.to_numpy(int), calibrated_test),
                                    market_comparison=market_comparison(test, calibrated_test),
                                    backtest=roi_report(test, calibrated_test)),
+                  market_blend=dict(fit=blend_fit,
+                                    test_all_bouts_including_missing_odds_fallback=metrics(
+                                        test.y.to_numpy(int), blended_test),
+                                    test_on_paired_opening_odds=market_comparison(test, blended_test),
+                                    illustrative_backtest=roi_report(test, blended_test),
+                                    caveat="Opening odds may not have been accessible at intended betting time."
+                                    ),
                   test_elo_baseline=metrics(test.y.to_numpy(int), elo_probability),
                   market_baseline=market_comparison(test, test_probability),
                   opening_odds_backtest=roi_report(test, test_probability),
@@ -219,6 +233,7 @@ def run(fights, out_dir="results", train_end="2024-01-01", valid_end="2025-01-01
     predictions = test[["event_date", "f1_name", "f2_name", "y"]].copy()
     predictions["p_f1"] = test_probability
     predictions["p_f1_calibrated"] = calibrated_test
+    predictions["p_f1_blended_opening_odds"] = blended_test
     predictions.to_csv(path / "out_of_sample_predictions.csv", index=False)
     return report
 
