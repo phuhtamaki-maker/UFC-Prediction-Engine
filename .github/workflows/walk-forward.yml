@@ -5,6 +5,8 @@ on:
     paths:
       - ".github/workflows/walk-forward.yml"
       - "walk_forward.py"
+      - "predict.py"
+      - "tests/test_opponent_quality.py"
       - "engine.py"
       - "calibration.py"
       - "selective_evaluation.py"
