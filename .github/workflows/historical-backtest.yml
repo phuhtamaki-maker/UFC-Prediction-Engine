@@ -1,0 +1,36 @@
+name: Historical UFC backtest
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/historical-backtest.yml"
+jobs:
+  historical-backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install packages
+        run: python -m pip install -r requirements.txt
+      - name: Download historical UFC data and run chronological backtest
+        run: python engine.py --download
+      - name: Print backtest summary
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          print(Path("results/report.json").read_text())
+          PY
+      - name: Upload research results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ufc-historical-backtest
+          path: results/
+          if-no-files-found: warn
+          retention-days: 14
