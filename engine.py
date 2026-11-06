@@ -129,6 +129,34 @@ def train_model(train):
     model.fit(np.vstack((x, -x)), np.concatenate((y, 1 - y)))
     return model
 
+def market_open_probabilities(frame):
+    """No-vig opening-line probabilities; None for missing/malformed odds."""
+    values = []
+    for _, row in frame.iterrows():
+        da = american_decimal(row.get("f1_open"))
+        db = american_decimal(row.get("f2_open"))
+        if da is None or db is None:
+            values.append(float("nan"))
+        else:
+            a, b = 1 / da, 1 / db
+            values.append(a / (a + b))
+    return np.array(values, dtype=float)
+
+
+def market_comparison(frame, model_probability):
+    market = market_open_probabilities(frame)
+    available = np.isfinite(market)
+    if not available.any():
+        return {"n": 0, "note": "No paired opening odds available."}
+    outcomes = frame.y.to_numpy(int)[available]
+    return {
+        "n": int(available.sum()),
+        "model_same_bouts": metrics(outcomes, model_probability[available]),
+        "market_no_vig": metrics(outcomes, market[available]),
+        "note": "Opening-line market baseline on identical fights; availability of quoted prices not verified."
+    }
+
+
 def roi_report(df, probabilities, edge=.05):
     units = 0
     profit = 0.
@@ -165,6 +193,7 @@ def run(fights, out_dir="results", train_end="2024-01-01", valid_end="2025-01-01
                   validation=metrics(validation.y.to_numpy(int), validation_probability),
                   test=metrics(test.y.to_numpy(int), test_probability),
                   test_elo_baseline=metrics(test.y.to_numpy(int), elo_probability),
+                  market_baseline=market_comparison(test, test_probability),
                   opening_odds_backtest=roi_report(test, test_probability),
                   limitations=["No independent calibration yet",
                                "No documented weight-cut observations yet",
