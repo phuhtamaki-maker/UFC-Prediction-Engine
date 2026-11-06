@@ -7,6 +7,7 @@ on:
       - "engine.py"
       - "calibration.py"
       - "selective_evaluation.py"
+      - "market_blend.py"
       - "requirements.txt"
 jobs:
   historical-backtest:
