@@ -1,12 +1,14 @@
 import unittest
 import pandas as pd
-from engine import prepared_rows, snap, empty_state, FEATURES
+from engine import prepared_rows, snap, empty_state, FEATURES, EXPERIMENTAL_FEATURES
 
 
 class OpponentQualityTests(unittest.TestCase):
     def test_new_columns_are_training_features(self):
-        self.assertIn("recent_form_diff", FEATURES)
-        self.assertIn("opponent_quality_diff", FEATURES)
+        self.assertNotIn("recent_form_diff", FEATURES)
+        self.assertNotIn("opponent_quality_diff", FEATURES)
+        self.assertIn("recent_form_diff", EXPERIMENTAL_FEATURES)
+        self.assertIn("opponent_quality_diff", EXPERIMENTAL_FEATURES)
 
     def test_new_fighter_gets_neutral_prior_form(self):
         snapshot = snap(empty_state(), pd.Timestamp("2026-01-01").date())
