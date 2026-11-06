@@ -16,6 +16,7 @@ from sklearn.metrics import accuracy_score, brier_score_loss, log_loss
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from calibration import apply_temperature, fit_temperature
+from selective_evaluation import confidence_report
 
 DATA_URL = "https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_fights_wide.csv"
 FEATURES = ["elo_diff", "win_rate_diff", "ufc_fights_diff", "ko_losses_diff",
@@ -193,6 +194,8 @@ def run(fights, out_dir="results", train_end="2024-01-01", valid_end="2025-01-01
     calibrated_test = apply_temperature(test_probability, temperature)
     elo_probability = 1 / (1 + 10 ** (-test.elo_diff.to_numpy(float)))
     report = dict(train_n=len(train),
+                  confidence_diagnostics=confidence_report(test.y.to_numpy(int), calibrated_test,
+                                                           market_open_probabilities(test)),
                   validation=metrics(validation.y.to_numpy(int), validation_probability),
                   test=metrics(test.y.to_numpy(int), test_probability),
                   calibration=dict(method="validation-only temperature scaling",
@@ -205,7 +208,8 @@ def run(fights, out_dir="results", train_end="2024-01-01", valid_end="2025-01-01
                   test_elo_baseline=metrics(test.y.to_numpy(int), elo_probability),
                   market_baseline=market_comparison(test, test_probability),
                   opening_odds_backtest=roi_report(test, test_probability),
-                  limitations=["Calibration uses 2024 validation only; needs forward re-validation",
+                  limitations=["Confidence thresholds are exploratory; 80% accuracy has NOT been demonstrated",
+                               "Calibration uses 2024 validation only; needs forward re-validation",
                                "No documented weight-cut observations yet",
                                "KO/TKO is a proxy, not a brain-injury diagnosis",
                                "Historical opening odds may not have been executable"])
