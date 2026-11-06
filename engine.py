@@ -22,7 +22,8 @@ from market_blend import fit_model_weight, mix_probabilities
 DATA_URL = "https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_fights_wide.csv"
 FEATURES = ["elo_diff", "win_rate_diff", "ufc_fights_diff", "ko_losses_diff",
             "recent_ko_diff", "days_since_ko_diff", "rest_days_diff",
-            "age_diff", "reach_diff", "height_diff"]
+            "age_diff", "reach_diff", "height_diff",
+            "recent_form_diff", "opponent_quality_diff"]
 
 def num(value):
     try:
@@ -44,7 +45,8 @@ def fighter_key(row, slot):
     return " ".join(str(row.get(f"f{slot}_name", "")).strip().casefold().split())
 
 def empty_state():
-    return dict(elo=1500., bouts=0, wins=0, ko_losses=0, last_ko=None, last_bout=None)
+    return dict(elo=1500., bouts=0, wins=0, ko_losses=0,
+                last_ko=None, last_bout=None, last_five=[], recent_opponent_elo=[])
 
 def snap(state, day):
     ko_days = (day - state["last_ko"]).days if state["last_ko"] else None
@@ -53,7 +55,11 @@ def snap(state, day):
                 bouts=state["bouts"], ko_losses=state["ko_losses"],
                 recent_ko=int(ko_days is not None and ko_days <= 180),
                 days_since_ko=min(ko_days, 1095) if ko_days is not None else 1095,
-                rest_days=min(rest_days, 1095) if rest_days is not None else 365)
+                rest_days=min(rest_days, 1095) if rest_days is not None else 365,
+                recent_form=(sum(state["last_five"]) + 1) / (len(state["last_five"]) + 2),
+                opponent_quality=(sum(state["recent_opponent_elo"]) /
+                                  len(state["recent_opponent_elo"]) - 1500) / 400
+                                  if state["recent_opponent_elo"] else 0.0)
 
 def prepared_rows(df):
     """All feature snapshots precede the bout. Same-date bouts never leak into each other."""
@@ -83,7 +89,9 @@ def prepared_rows(df):
                 "rest_days_diff": (sa["rest_days"] - sb["rest_days"]) / 365,
                 "age_diff": (num(row.get("f1_age")) or 0) - (num(row.get("f2_age")) or 0),
                 "reach_diff": (num(row.get("f1_reach_cm")) or 0) - (num(row.get("f2_reach_cm")) or 0),
-                "height_diff": (num(row.get("f1_height_cm")) or 0) - (num(row.get("f2_height_cm")) or 0)}
+                "height_diff": (num(row.get("f1_height_cm")) or 0) - (num(row.get("f2_height_cm")) or 0),
+                "recent_form_diff": sa["recent_form"] - sb["recent_form"],
+                "opponent_quality_diff": sa["opponent_quality"] - sb["opponent_quality"]}
             outcome = (str(row["result_f1"]).strip().upper(), str(row["result_f2"]).strip().upper())
             if outcome not in (("W", "L"), ("L", "W")):
                 continue
@@ -99,17 +107,23 @@ def prepared_rows(df):
                 sample["f1_open"], sample["f2_open"] = sample["f2_open"], sample["f1_open"]
                 sample["y"] = 1 - sample["y"]
             observations.append(sample)
-            pending.append((a, b, int(outcome[0] == "W"), str(row.get("finish_type", "")).casefold().strip()))
-        for a, b, winner_a, finish_type in pending:
+            pending.append((a, b, int(outcome[0] == "W"),
+                            str(row.get("finish_type", "")).casefold().strip(),
+                            states[a]["elo"], states[b]["elo"]))
+        for a, b, winner_a, finish_type, pre_elo_a, pre_elo_b in pending:
             sa, sb = states[a], states[b]
             expected = 1 / (1 + 10 ** ((sb["elo"] - sa["elo"]) / 400))
             change = 24 * (winner_a - expected)
             sa["elo"] += change
             sb["elo"] -= change
-            for fighter, won in ((sa, winner_a), (sb, 1 - winner_a)):
+            for fighter, won, opponent_elo in ((sa, winner_a, pre_elo_b),
+                                               (sb, 1 - winner_a, pre_elo_a)):
                 fighter["bouts"] += 1
                 fighter["wins"] += won
                 fighter["last_bout"] = day
+                fighter["last_five"] = (fighter["last_five"] + [won])[-5:]
+                fighter["recent_opponent_elo"] = (
+                    fighter["recent_opponent_elo"] + [opponent_elo])[-5:]
             if finish_type == "ko_tko":
                 victim = sb if winner_a else sa
                 victim["ko_losses"] += 1
