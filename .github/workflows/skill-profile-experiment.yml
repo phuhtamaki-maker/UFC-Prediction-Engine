@@ -1,0 +1,42 @@
+name: UFC skill profile research
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/skill-profile-experiment.yml"
+      - "skill_features.py"
+      - "skill_profile_experiment.py"
+      - "engine.py"
+      - "calibration.py"
+      - "requirements.txt"
+      - "tests/test_skill_features.py"
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Download UFC fight statistics
+        run: |
+          mkdir -p data
+          curl --fail --location --silent --show-error --retry 2 --output data/ufc_all_fights_wide.csv https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_fights_wide.csv
+      - name: Run matched historical model comparison
+        run: python skill_profile_experiment.py
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ufc-skill-profile-research
+          path: results/skill_profile_experiment.json
+          if-no-files-found: warn
+          retention-days: 30
