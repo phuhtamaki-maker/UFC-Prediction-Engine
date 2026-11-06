@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - ".github/workflows/historical-backtest.yml"
+      - "engine.py"
+      - "requirements.txt"
 jobs:
   historical-backtest:
     runs-on: ubuntu-latest
