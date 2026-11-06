@@ -18,6 +18,7 @@ from sklearn.preprocessing import StandardScaler
 from calibration import apply_temperature, fit_temperature
 from selective_evaluation import confidence_report
 from market_blend import fit_model_weight, mix_probabilities
+from skill_features import SKILL_FEATURES, state as skill_state, snapshot as skill_snapshot, update as update_skill
 
 DATA_URL = "https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_fights_wide.csv"
 # Keep the more reliable 10-feature baseline active. The two extended
@@ -25,7 +26,7 @@ DATA_URL = "https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_
 FEATURES = ["elo_diff", "win_rate_diff", "ufc_fights_diff", "ko_losses_diff",
             "recent_ko_diff", "days_since_ko_diff", "rest_days_diff",
             "age_diff", "reach_diff", "height_diff"]
-EXPERIMENTAL_FEATURES = FEATURES + ["recent_form_diff", "opponent_quality_diff"]
+EXPERIMENTAL_FEATURES = FEATURES + ["recent_form_diff", "opponent_quality_diff"] + SKILL_FEATURES
 
 def num(value):
     try:
@@ -48,7 +49,8 @@ def fighter_key(row, slot):
 
 def empty_state():
     return dict(elo=1500., bouts=0, wins=0, ko_losses=0,
-                last_ko=None, last_bout=None, last_five=[], recent_opponent_elo=[])
+                last_ko=None, last_bout=None, last_five=[], recent_opponent_elo=[],
+                skill=skill_state())
 
 def snap(state, day):
     ko_days = (day - state["last_ko"]).days if state["last_ko"] else None
@@ -81,6 +83,8 @@ def prepared_rows(df):
             if not a or not b or a == b:
                 continue
             sa, sb = snap(states[a], day), snap(states[b], day)
+            profile_a = skill_snapshot(states[a]["skill"])
+            profile_b = skill_snapshot(states[b]["skill"])
             values = {
                 "elo_diff": (sa["elo"] - sb["elo"]) / 400,
                 "win_rate_diff": sa["win_rate"] - sb["win_rate"],
@@ -93,7 +97,10 @@ def prepared_rows(df):
                 "reach_diff": (num(row.get("f1_reach_cm")) or 0) - (num(row.get("f2_reach_cm")) or 0),
                 "height_diff": (num(row.get("f1_height_cm")) or 0) - (num(row.get("f2_height_cm")) or 0),
                 "recent_form_diff": sa["recent_form"] - sb["recent_form"],
-                "opponent_quality_diff": sa["opponent_quality"] - sb["opponent_quality"]}
+                "opponent_quality_diff": sa["opponent_quality"] - sb["opponent_quality"],
+                **{f"{name}_diff": profile_a[name] - profile_b[name]
+                   for name in ("sig_strikes_per_min", "sig_strike_defense",
+                                "takedowns_per_15min", "takedown_defense")}}
             outcome = (str(row["result_f1"]).strip().upper(), str(row["result_f2"]).strip().upper())
             if outcome not in (("W", "L"), ("L", "W")):
                 continue
@@ -111,9 +118,11 @@ def prepared_rows(df):
             observations.append(sample)
             pending.append((a, b, int(outcome[0] == "W"),
                             str(row.get("finish_type", "")).casefold().strip(),
-                            states[a]["elo"], states[b]["elo"]))
-        for a, b, winner_a, finish_type, pre_elo_a, pre_elo_b in pending:
+                            states[a]["elo"], states[b]["elo"], row))
+        for a, b, winner_a, finish_type, pre_elo_a, pre_elo_b, fight_row in pending:
             sa, sb = states[a], states[b]
+            update_skill(sa["skill"], fight_row, 1)
+            update_skill(sb["skill"], fight_row, 2)
             expected = 1 / (1 + 10 ** ((sb["elo"] - sa["elo"]) / 400))
             change = 24 * (winner_a - expected)
             sa["elo"] += change
@@ -138,10 +147,11 @@ def metrics(actual, probability):
                 brier=round(float(brier_score_loss(actual, probability)), 4),
                 log_loss=round(float(log_loss(actual, np.clip(probability, 1e-6, 1 - 1e-6), labels=[0, 1])), 4))
 
-def train_model(train):
+def train_model(train, feature_columns=None):
     if len(train) < 20 or train.y.nunique() < 2:
         raise ValueError("Need at least 20 completed bouts and both winning outcomes")
-    x = train[FEATURES].to_numpy(float)
+    columns = FEATURES if feature_columns is None else feature_columns
+    x = train[columns].to_numpy(float)
     y = train.y.to_numpy(int)
     model = make_pipeline(StandardScaler(with_mean=False),
                           LogisticRegression(C=.1, max_iter=2000, fit_intercept=False))
