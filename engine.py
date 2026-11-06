@@ -19,6 +19,7 @@ from calibration import apply_temperature, fit_temperature
 from selective_evaluation import confidence_report
 from market_blend import fit_model_weight, mix_probabilities
 from skill_features import SKILL_FEATURES, state as skill_state, snapshot as skill_snapshot, update as update_skill
+from data_quality import SAFE_FEATURES, row_features
 
 DATA_URL = "https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_fights_wide.csv"
 # Keep the more reliable 10-feature baseline active. The two extended
@@ -26,7 +27,7 @@ DATA_URL = "https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_
 FEATURES = ["elo_diff", "win_rate_diff", "ufc_fights_diff", "ko_losses_diff",
             "recent_ko_diff", "days_since_ko_diff", "rest_days_diff",
             "age_diff", "reach_diff", "height_diff"]
-EXPERIMENTAL_FEATURES = FEATURES + ["recent_form_diff", "opponent_quality_diff"] + SKILL_FEATURES
+EXPERIMENTAL_FEATURES = FEATURES + ["recent_form_diff", "opponent_quality_diff"] + SKILL_FEATURES + list(SAFE_FEATURES)
 
 def num(value):
     try:
@@ -98,6 +99,7 @@ def prepared_rows(df):
                 "height_diff": (num(row.get("f1_height_cm")) or 0) - (num(row.get("f2_height_cm")) or 0),
                 "recent_form_diff": sa["recent_form"] - sb["recent_form"],
                 "opponent_quality_diff": sa["opponent_quality"] - sb["opponent_quality"],
+                **row_features(row),
                 **{f"{name}_diff": profile_a[name] - profile_b[name]
                    for name in ("sig_strikes_per_min", "sig_strike_defense",
                                 "takedowns_per_15min", "takedown_defense")}}
