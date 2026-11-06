@@ -1,0 +1,37 @@
+name: Freeze Nov 7 pre-event predictions
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/freeze-nov7.yml"
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install and test
+        run: |
+          python -m pip install -r requirements.txt
+          python -m unittest discover -s tests -v
+      - name: Download historical UFC data
+        run: |
+          mkdir -p data
+          curl -fsSL --retry 2 -o data/ufc_all_fights_wide.csv https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_fights_wide.csv
+      - name: Freeze forecast before noon UTC Nov 7
+        run: |
+          python freeze_predictions.py --history data/ufc_all_fights_wide.csv --card data/upcoming_2026-11-07.csv --cutoff-utc 2026-11-07T12:00:00Z --out results/frozen_card
+      - name: Upload frozen predictions with run-specific name
+        uses: actions/upload-artifact@v4
+        with:
+          name: frozen-ufc-nov7-${{ github.run_id }}
+          path: results/frozen_card/
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90
