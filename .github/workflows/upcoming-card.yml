@@ -1,0 +1,37 @@
+name: Upcoming UFC card predictions
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/upcoming-card.yml"
+      - "predict.py"
+      - "engine.py"
+      - "calibration.py"
+      - "data/upcoming_2026-11-07.csv"
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install packages
+        run: python -m pip install -r requirements.txt
+      - name: Get UFC data and create provisional research predictions
+        run: |
+          mkdir -p data results
+          curl -fsSL --retry 2 -o data/ufc_all_fights_wide.csv https://raw.githubusercontent.com/nlbair/ufc-data/main/data/ufc_all_fights_wide.csv
+          python predict.py --card data/upcoming_2026-11-07.csv
+      - name: Publish CSV artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upcoming-ufc-2026-11-07-research-predictions
+          path: results/upcoming_predictions.csv
+          if-no-files-found: warn
+          retention-days: 14
