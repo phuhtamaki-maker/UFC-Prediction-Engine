@@ -1,0 +1,6 @@
+fighter,category,published_date,source_url,source_type,note
+Lucas Brennan,public_injury_announcement,2026-11-04,https://www.ufc.com/news/updates-ufc-fight-night-cortes-acosta-vs-walker,ufc,Withdrew from scheduled Bashi fight due to injury; no diagnosis stated
+Carlos Calderon,short_notice,2026-11-04,https://www.ufc.com/news/updates-ufc-fight-night-cortes-acosta-vs-walker,ufc,Replaced Brennan for Nov 7 event
+Sean Brady,public_injury_announcement,2026-10-30,https://www.ufc.com/news/ufc-fight-night-bonfim-vs-brady-updates,ufc,Withdrew from planned main event due to injury; no diagnosis stated
+Waldo Cortes-Acosta,short_notice,2026-10-30,https://www.ufc.com/news/ufc-fight-night-bonfim-vs-brady-updates,ufc,Accepted replacement main event
+Johnny Walker,short_notice,2026-10-30,https://www.ufc.com/news/ufc-fight-night-bonfim-vs-brady-updates,ufc,Accepted replacement main event
