@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.metrics import brier_score_loss, log_loss
+from selective_evaluation import confidence_report, wilson_interval
 
 
 def file_sha256(path):
@@ -130,9 +131,11 @@ def score(frozen_csv, manifest_json, completed_csv):
         "coverage": round(counted / total, 4) if total else 0,
         "correct": correct,
         "accuracy": round(correct / counted, 4) if counted else None,
+        "accuracy_95pct_wilson_interval": wilson_interval(correct, counted),
+        "confidence_diagnostics": confidence_report(y, p, thresholds=(0.6, 0.7, 0.8)),
         "brier": round(float(brier_score_loss(y, p)), 4) if counted else None,
         "log_loss": round(float(log_loss(y, np.clip(p, 1e-6, 1 - 1e-6), labels=[0, 1])), 4) if counted else None,
-        "warning": "Only exact matched concluded bouts scored. Missing/cancelled/replaced fights excluded; no claim of betting profitability.",
+        "warning": "Descriptive statistics for scored bouts only; missing results reduce coverage and may bias estimates. Confidence thresholds are predetermined, not betting recommendations. No demonstrated profitability.",
         "fights": details,
     }
 
