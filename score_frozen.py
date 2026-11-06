@@ -4,6 +4,7 @@ Do not infer an outcome for cancelled, replaced, unfinished or ambiguous fights.
 Never regenerate the archived predictions after outcomes become known.
 """
 import argparse
+import datetime as dt
 import hashlib
 import json
 import unicodedata
@@ -40,12 +41,37 @@ def score(frozen_csv, manifest_json, completed_csv):
     manifest = json.loads(Path(manifest_json).read_text(encoding="utf-8"))
     if file_sha256(frozen_csv) != manifest["predictions_sha256"]:
         raise ValueError("Frozen predictions failed SHA-256 verification")
+    # An unchanged file is not necessarily a genuine *pre-event* forecast.
+    # Enforce chronology using immutable manifest metadata as an additional
+    # guard. GitHub Actions run timing should be checked independently.
+    generated_text = manifest.get("generated_utc")
+    cutoff_text = manifest.get("cutoff_utc")
+    if generated_text is not None or cutoff_text is not None:
+        if not generated_text or not cutoff_text:
+            raise ValueError("Both generated_utc and cutoff_utc are required")
+        def moment(value):
+            parsed = dt.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                raise ValueError("Manifest timestamps require UTC offsets")
+            return parsed.astimezone(dt.timezone.utc)
+        generated = moment(generated_text)
+        cutoff = moment(cutoff_text)
+        if generated >= cutoff:
+            raise ValueError("Post-cutoff forecast cannot count as pre-event")
+    else:
+        # Legacy unit fixtures may omit timestamps; such snapshots cannot
+        # qualify as independently time-verified forecasts.
+        generated = cutoff = None
     frozen = pd.read_csv(frozen_csv, dtype={"date": "str"})
     if len(frozen) != manifest["prediction_count"]:
         raise ValueError("Frozen row count differs from manifest")
     needed = {"date", "fighter_1", "fighter_2", "p_fighter_1", "p_fighter_2"}
     if not needed <= set(frozen.columns):
         raise ValueError("Frozen data lacks required columns")
+    if generated is not None:
+        event_days = pd.to_datetime(frozen["date"], errors="coerce")
+        if event_days.isna().any() or (event_days.dt.date < cutoff.date()).any():
+            raise ValueError("Frozen card contains event before UTC cutoff date")
     completed = pd.read_csv(completed_csv, dtype={"event_date": "str"})
     required = {"event_date", "f1_name", "f2_name", "result_f1", "result_f2"}
     if not required <= set(completed.columns):
@@ -95,6 +121,9 @@ def score(frozen_csv, manifest_json, completed_csv):
         "manifest_sha256": file_sha256(manifest_json),
         "frozen_predictions_sha256": manifest["predictions_sha256"],
         "github_forecast_run": manifest.get("github_run_id"),
+        "snapshot_chronology_checked": generated is not None,
+        "generated_utc": generated_text,
+        "cutoff_utc": cutoff_text,
         "total_frozen": total,
         "completed_scored": counted,
         "excluded_or_unmatched": total - counted,
