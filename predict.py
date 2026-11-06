@@ -2,13 +2,14 @@
 
 CSV for upcoming bouts: event_date,f1_name,f2_name plus optional f1_age,
 f2_age,f1_reach_cm,f2_reach_cm,f1_height_cm,f2_height_cm.
-Provisional, uncalibrated probabilities. Not demonstrated betting opportunities.
+Provisional probabilities with optional historical validation calibration.\nNo demonstrated betting edge.
 """
 import argparse
 from pathlib import Path
 import numpy as np
 import pandas as pd
 from engine import FEATURES, prepared_rows, fighter_key, empty_state, snap, num, train_model
+from calibration import apply_temperature, fit_temperature
 
 
 def normalize(name):
@@ -30,7 +31,19 @@ def run_predictions(history, upcoming):
     if past.empty:
         raise ValueError("No historical bouts before upcoming card")
     samples, states = prepared_rows(past)
-    model = train_model(samples)
+    cutoff = first_day - pd.Timedelta(days=365)
+    training = samples[samples.event_date < cutoff]
+    validation = samples[samples.event_date >= cutoff]
+    # Keep calibration wholly separate from model training; when history is
+    # limited, fall back to an explicitly uncalibrated baseline.
+    calibrated = len(training) >= 20 and len(validation) >= 30 and training.y.nunique() == 2
+    if calibrated:
+        model = train_model(training)
+        val_p = model.predict_proba(validation[FEATURES].to_numpy(float))[:, 1]
+        temp = fit_temperature(val_p, validation.y.to_numpy(int))
+    else:
+        model = train_model(samples)
+        temp = 1.0
     # Link schedule names to historical fighter IDs (which are not supplied on future cards).
     ids_by_name = {}
     for _, r in past.sort_values("event_date").iterrows():
@@ -61,12 +74,15 @@ def run_predictions(history, upcoming):
                                 ("height_diff", "height_cm")):
             a, b = num(row.get("f1_" + source)), num(row.get("f2_" + source))
             diff[feature] = a - b if a is not None and b is not None else 0.0
-        probability = float(model.predict_proba(np.array([[diff[k] for k in FEATURES]]))[0, 1])
+        raw_probability = float(model.predict_proba(np.array([[diff[k] for k in FEATURES]]))[0, 1])
+        probability = float(apply_temperature([raw_probability], temp)[0])
         results.append({"date": str(day), "fighter_1": name_a, "fighter_2": name_b,
                         "p_fighter_1": round(probability, 4),
                         "p_fighter_2": round(1 - probability, 4),
                         "fighter_1_prior_ufc_bouts": s1["bouts"],
                         "fighter_2_prior_ufc_bouts": s2["bouts"],
+                        "historical_temperature": round(temp, 3),
+                        "calibration_status": "validation-year calibrated" if calibrated else "NOT calibrated (insufficient history)",
                         "warning": "Limited UFC history" if min(s1["bouts"], s2["bouts"]) < 3
                         else "Experimental probability; independent calibration pending"})
     return pd.DataFrame(results)
