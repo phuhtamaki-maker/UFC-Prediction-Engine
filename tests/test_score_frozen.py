@@ -44,6 +44,25 @@ class FrozenScoringTests(unittest.TestCase):
         self.assertEqual([r["status"] for r in result["fights"]],
                          ["scored", "non_decisive_or_not_complete", "unmatched"])
 
+    def test_uncertainty_and_confidence_report_use_scored_only(self):
+        result = score(self.frozen, self.manifest, self.results)
+        self.assertEqual(result["accuracy_95pct_wilson_interval"], [0.2065, 1.0])
+        rows = result["confidence_diagnostics"]["thresholds"]
+        self.assertEqual([row["selected_bouts"] for row in rows], [1, 1, 0])
+        self.assertEqual(rows[0]["total_bouts"], 1)
+        self.assertEqual(rows[0]["correct_predictions"], 1)
+        self.assertIsNone(rows[2]["accuracy"])
+
+    def test_no_scored_fights_has_no_misleading_accuracy(self):
+        pd.DataFrame(columns=["event_date", "f1_name", "f2_name",
+                              "result_f1", "result_f2"]).to_csv(self.results, index=False)
+        result = score(self.frozen, self.manifest, self.results)
+        self.assertEqual(result["completed_scored"], 0)
+        self.assertIsNone(result["accuracy"])
+        self.assertEqual(result["accuracy_95pct_wilson_interval"], [None, None])
+        self.assertTrue(all(x["selected_bouts"] == 0
+                            for x in result["confidence_diagnostics"]["thresholds"]))
+
     def test_tampering_detected(self):
         self.frozen.write_text(self.frozen.read_text() + "\n")
         with self.assertRaisesRegex(ValueError, "SHA-256"):
