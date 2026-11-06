@@ -1,0 +1,41 @@
+name: Audit frozen UFC card
+on:
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Verify code
+        run: |
+          python -m pip install -r requirements.txt
+          python -m unittest discover -s tests -v
+      - name: Retrieve original pre-event predictions
+        uses: actions/download-artifact@v4
+        with:
+          name: frozen-ufc-nov7-42296300043
+          run-id: 42296300043
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: results/original_snapshot
+      - name: Compare original forecasts to repository card
+        run: |
+          python card_audit.py \
+            --frozen results/original_snapshot/frozen_predictions.csv \
+            --manifest results/original_snapshot/manifest.json \
+            --card data/upcoming_2026-11-07.csv \
+            --out results/card_audit.json
+      - name: Save audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: frozen-ufc-card-audit-${{ github.run_id }}
+          path: results/card_audit.json
+          if-no-files-found: error
+          retention-days: 90
