@@ -69,7 +69,9 @@ def run_predictions(history, upcoming):
             "ko_losses_diff": s1["ko_losses"] - s2["ko_losses"],
             "recent_ko_diff": s1["recent_ko"] - s2["recent_ko"],
             "days_since_ko_diff": (s1["days_since_ko"] - s2["days_since_ko"]) / 365,
-            "rest_days_diff": (s1["rest_days"] - s2["rest_days"]) / 365}
+            "rest_days_diff": (s1["rest_days"] - s2["rest_days"]) / 365,
+            "recent_form_diff": s1["recent_form"] - s2["recent_form"],
+            "opponent_quality_diff": s1["opponent_quality"] - s2["opponent_quality"]}
         for feature, source in (("age_diff", "age"), ("reach_diff", "reach_cm"),
                                 ("height_diff", "height_cm")):
             a, b = num(row.get("f1_" + source)), num(row.get("f2_" + source))
