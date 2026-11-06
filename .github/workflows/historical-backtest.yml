@@ -6,6 +6,7 @@ on:
       - ".github/workflows/historical-backtest.yml"
       - "engine.py"
       - "calibration.py"
+      - "selective_evaluation.py"
       - "requirements.txt"
 jobs:
   historical-backtest:
