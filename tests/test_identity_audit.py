@@ -3,6 +3,7 @@ import unittest
 import pandas as pd
 
 from identity_audit import audit_identities
+from engine import fighter_key
 
 
 class FighterIdentityAuditTests(unittest.TestCase):
@@ -56,6 +57,16 @@ class FighterIdentityAuditTests(unittest.TestCase):
         self.assertEqual(report["ambiguous_name_ids"], {"bruno silva": ["bruno silva", "fighter-a"]})
         self.assertEqual(report["ambiguous_name_occurrences"],
                          {"bruno silva": {"bruno silva": 1, "fighter-a": 1}})
+
+    def test_fighter_key_handles_missing_id_markers(self):
+        for missing in (None, float("nan"), "", "None", "null", "<NA>"):
+            with self.subTest(missing=repr(missing)):
+                row = pd.Series({"f1_name": " Bruno  Silva ", "f1_id": missing})
+                self.assertEqual(fighter_key(row, 1), "bruno silva")
+
+    def test_fighter_key_preserves_real_id(self):
+        row = pd.Series({"f1_name": "Bruno Silva", "f1_id": "fighter-a"})
+        self.assertEqual(fighter_key(row, 1), "fighter-a")
 
     def test_missing_columns_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "Missing columns"):
