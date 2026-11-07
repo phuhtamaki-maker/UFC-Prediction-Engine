@@ -44,7 +44,7 @@ def american_decimal(value):
 
 def fighter_key(row, slot):
     fid = str(row.get(f"f{slot}_id", "")).strip()
-    if fid and fid.lower() != "nan":
+    if fid and fid.lower() not in ("nan", "none", "<na>", "null"):
         return fid
     return " ".join(str(row.get(f"f{slot}_name", "")).strip().casefold().split())
 
