@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "identity_audit.py"
+      - "engine.py"
+      - "predict.py"
       - "tests/test_identity_audit.py"
       - ".github/workflows/fighter-identity-audit.yml"
   workflow_dispatch:
