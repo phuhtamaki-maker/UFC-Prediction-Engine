@@ -25,18 +25,25 @@ def audit_identities(history, cutoff=None):
     if cutoff is not None:
         data = data[data["event_date"] < pd.Timestamp(cutoff)]
     candidates = {}
+    occurrences = {}
     for _, row in data.iterrows():
         for slot in (1, 2):
             name = normalize(row.get(f"f{slot}_name", ""))
             if name and name != "nan":
-                candidates.setdefault(name, set()).add(fighter_key(row, slot))
+                key = fighter_key(row, slot)
+                candidates.setdefault(name, set()).add(key)
+                by_key = occurrences.setdefault(name, {})
+                by_key[key] = by_key.get(key, 0) + 1
     collisions = {name: sorted(ids) for name, ids in sorted(candidates.items())
                   if len(ids) > 1}
+    collision_counts = {name: {key: occurrences[name][key] for key in ids}
+                        for name, ids in collisions.items()}
     return {"historical_bouts": int(len(data)),
             "invalid_date_rows_excluded": invalid_dates,
             "unique_normalized_names": len(candidates),
             "ambiguous_names": len(collisions),
-            "ambiguous_name_ids": collisions}
+            "ambiguous_name_ids": collisions,
+            "ambiguous_name_occurrences": collision_counts}
 
 
 def main():
