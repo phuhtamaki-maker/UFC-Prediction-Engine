@@ -51,8 +51,8 @@ class UpcomingTests(unittest.TestCase):
         history = self.historical()
         duplicate = history.iloc[[0]].copy()
         duplicate["event_date"] = "2024-01-31"
-        duplicate["f1_name"] = "Unused"
-        duplicate["f1_id"] = "unused-id"
+        duplicate["f1_name"] = "B"
+        duplicate["f1_id"] = "different-id-for-B"
         history = pd.concat([history, duplicate], ignore_index=True)
         card = pd.DataFrame([{"event_date": "2024-02-01",
                              "f1_name": "A", "f2_name": "C"}])
