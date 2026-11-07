@@ -1,5 +1,6 @@
 """Validate pre-fight provenance before computing research-only value-bet results."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -33,6 +34,12 @@ def main():
     parser.add_argument("--min-edge", type=float, default=0.05)
     args = parser.parse_args()
     report = build_value_report(pd.read_csv(args.input), min_edge=args.min_edge)
+    digest = hashlib.sha256()
+    with open(args.input, "rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    report["source_csv_sha256"] = digest.hexdigest()
+    report["source_csv_name"] = Path(args.input).name
     target = Path(args.out)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
