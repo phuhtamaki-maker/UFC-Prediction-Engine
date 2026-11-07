@@ -39,6 +39,13 @@ class OddsValueReportTests(unittest.TestCase):
         self.assertEqual(result["no_bet_bouts"], 1)
         self.assertIsNone(result["realized_roi"])
 
+    def test_earlier_odds_flagged_as_potentially_stale(self):
+        data = row()
+        data["odds_time"] = "2025-01-01T17:00:00Z"
+        result = build_value_report(pd.DataFrame([data]))
+        self.assertEqual(result["odds_recorded_before_prediction"], 1)
+        self.assertIn("stale", result["price_timing_warning"])
+
     def test_post_event_odds_block_report(self):
         data = row()
         data["odds_time"] = "2025-01-01T21:00:00Z"
