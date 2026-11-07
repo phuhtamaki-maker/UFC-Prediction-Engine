@@ -23,6 +23,22 @@ class ValueEvaluationTests(unittest.TestCase):
         r = evaluate_value_bets([1], [.5], [1.8], [1.8])
         self.assertEqual(r["bets"], 0)
 
+    def test_fighter_order_reversal_preserves_roi(self):
+        original = evaluate_value_bets([1, 0], [.7, .35], [2.0, 1.6], [1.5, 2.2])
+        reversed_order = evaluate_value_bets([0, 1], [.3, .65], [1.5, 2.2], [2.0, 1.6])
+        self.assertEqual(original["bets"], reversed_order["bets"])
+        self.assertEqual(original["profit_units"], reversed_order["profit_units"])
+        self.assertEqual(original["realized_roi"], reversed_order["realized_roi"])
+
+    def test_invalid_odds_are_excluded(self):
+        r = evaluate_value_bets([1, 0], [.8, .2], [1.0, 2.0], [2.0, float("inf")])
+        self.assertEqual(r["priced_bouts"], 0)
+        self.assertEqual(r["bets"], 0)
+
+    def test_equal_edges_do_not_choose_arbitrary_side(self):
+        r = evaluate_value_bets([1], [.5], [2.5], [2.5])
+        self.assertEqual(r["bets"], 0)
+
     def test_invalid_probabilities_rejected(self):
         with self.assertRaises(ValueError):
             evaluate_value_bets([1], [1.2], [2.0], [2.0])
