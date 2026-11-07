@@ -34,6 +34,29 @@ class FighterIdentityAuditTests(unittest.TestCase):
         self.assertEqual(report["ambiguous_names"], 0)
         self.assertEqual(report["ambiguous_name_occurrences"], {})
 
+    def test_repeated_same_id_is_not_ambiguous(self):
+        data = pd.DataFrame([
+            {"event_date": "2024-01-01", "f1_name": "Bruno Silva", "f1_id": "fighter-a",
+             "f2_name": "Opponent", "f2_id": "opponent"},
+            {"event_date": "2024-02-01", "f1_name": " BRUNO  SILVA ", "f1_id": "fighter-a",
+             "f2_name": "Opponent", "f2_id": "opponent"},
+        ])
+        report = audit_identities(data)
+        self.assertEqual(report["ambiguous_names"], 0)
+        self.assertEqual(report["unique_normalized_names"], 2)
+
+    def test_missing_id_and_explicit_id_are_flagged_for_review(self):
+        data = pd.DataFrame([
+            {"event_date": "2024-01-01", "f1_name": "Bruno Silva", "f1_id": None,
+             "f2_name": "Opponent", "f2_id": "opponent"},
+            {"event_date": "2024-02-01", "f1_name": "Bruno Silva", "f1_id": "fighter-a",
+             "f2_name": "Opponent", "f2_id": "opponent"},
+        ])
+        report = audit_identities(data)
+        self.assertEqual(report["ambiguous_name_ids"], {"bruno silva": ["bruno silva", "fighter-a"]})
+        self.assertEqual(report["ambiguous_name_occurrences"],
+                         {"bruno silva": {"bruno silva": 1, "fighter-a": 1}})
+
     def test_missing_columns_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "Missing columns"):
             audit_identities(pd.DataFrame({"event_date": ["2024-01-01"]}))
