@@ -19,6 +19,8 @@ class FighterIdentityAuditTests(unittest.TestCase):
         self.assertEqual(report["historical_bouts"], 2)
         self.assertEqual(report["ambiguous_names"], 1)
         self.assertEqual(report["ambiguous_name_ids"], {"alex": ["one", "two"]})
+        self.assertEqual(report["ambiguous_name_occurrences"],
+                         {"alex": {"one": 1, "two": 1}})
 
     def test_invalid_dates_are_excluded(self):
         data = pd.DataFrame([
@@ -30,6 +32,7 @@ class FighterIdentityAuditTests(unittest.TestCase):
         report = audit_identities(data)
         self.assertEqual(report["invalid_date_rows_excluded"], 1)
         self.assertEqual(report["ambiguous_names"], 0)
+        self.assertEqual(report["ambiguous_name_occurrences"], {})
 
     def test_missing_columns_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "Missing columns"):
