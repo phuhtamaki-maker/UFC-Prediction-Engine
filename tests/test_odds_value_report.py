@@ -28,6 +28,8 @@ class OddsValueReportTests(unittest.TestCase):
         self.assertEqual(result["bets"], 1)
         self.assertEqual(result["profit_units"], 1.0)
         self.assertEqual(result["realized_roi"], 1.0)
+        self.assertEqual(result["bet_coverage"], 1.0)
+        self.assertIsNotNone(result["minimum_sample_warning"])
 
     def test_no_edge_reports_no_bet(self):
         data = row()
@@ -38,6 +40,7 @@ class OddsValueReportTests(unittest.TestCase):
         self.assertEqual(result["bets"], 0)
         self.assertEqual(result["no_bet_bouts"], 1)
         self.assertIsNone(result["realized_roi"])
+        self.assertEqual(result["bet_coverage"], 0.0)
 
     def test_earlier_odds_flagged_as_potentially_stale(self):
         data = row()
