@@ -25,8 +25,20 @@ ALLOWED_SOURCES = {"official_commission", "ufc", "athlete_public_statement", "re
 
 
 def parse_date(text):
-    """Require UTC or explicit calendar date so event timing is auditable."""
-    return dt.date.fromisoformat(str(text)[:10])
+    """Accept an exact ISO calendar date or timezone-aware ISO timestamp.
+
+    Never silently truncate malformed strings or accept naive timestamps:
+    publication timing must be independently auditable.
+    """
+    value = str(text).strip()
+    if len(value) == 10:
+        return dt.date.fromisoformat(value)
+    if "T" not in value:
+        raise ValueError("Expected ISO date or timezone-aware timestamp")
+    timestamp = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+        raise ValueError("Publication timestamp requires an explicit timezone")
+    return timestamp.astimezone(dt.timezone.utc).date()
 
 
 def verified_observations(path, bout_date):
