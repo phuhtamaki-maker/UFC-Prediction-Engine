@@ -3,6 +3,7 @@
 Usage: python identity_audit.py --history data/ufc_all_fights_wide.csv
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -45,6 +46,12 @@ def main():
     parser.add_argument("--out", default="results/fighter_identity_audit.json")
     args = parser.parse_args()
     report = audit_identities(pd.read_csv(args.history, low_memory=False), args.before)
+    digest = hashlib.sha256()
+    with open(args.history, "rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    report["source_history_sha256"] = digest.hexdigest()
+    report["exclusive_cutoff"] = args.before
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
