@@ -35,6 +35,38 @@ class UpcomingTests(unittest.TestCase):
         changed = run_predictions(pd.concat([past, leaked]), card).iloc[0].p_fighter_1
         self.assertEqual(baseline, changed)
 
+    def test_ambiguous_historical_name_is_rejected(self):
+        history = self.historical()
+        duplicate = history.iloc[[0]].copy()
+        duplicate["event_date"] = "2024-01-31"
+        duplicate["f1_name"] = "A"
+        duplicate["f1_id"] = "different-id-for-A"
+        history = pd.concat([history, duplicate], ignore_index=True)
+        card = pd.DataFrame([{"event_date": "2024-02-01",
+                             "f1_name": "A", "f2_name": "C"}])
+        with self.assertRaisesRegex(ValueError, "Ambiguous historical fighter identity"):
+            run_predictions(history, card)
+
+    def test_unrelated_ambiguous_name_does_not_block_card(self):
+        history = self.historical()
+        duplicate = history.iloc[[0]].copy()
+        duplicate["event_date"] = "2024-01-31"
+        duplicate["f1_name"] = "B"
+        duplicate["f1_id"] = "different-id-for-B"
+        history = pd.concat([history, duplicate], ignore_index=True)
+        card = pd.DataFrame([{"event_date": "2024-02-01",
+                             "f1_name": "A", "f2_name": "C"}])
+        self.assertEqual(len(run_predictions(history, card)), 1)
+
+    def test_repeated_same_fighter_id_is_allowed(self):
+        history = self.historical()
+        repeated = history.iloc[[0]].copy()
+        repeated["event_date"] = "2024-01-31"
+        history = pd.concat([history, repeated], ignore_index=True)
+        card = pd.DataFrame([{"event_date": "2024-02-01",
+                             "f1_name": "A", "f2_name": "C"}])
+        self.assertEqual(len(run_predictions(history, card)), 1)
+
     def test_unknown_fighter_warns(self):
         card = pd.DataFrame([{"event_date":"2024-02-01","f1_name":"A","f2_name":"Newbie"}])
         predictions = run_predictions(self.historical(), card)

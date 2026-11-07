@@ -50,7 +50,14 @@ def run_predictions(history, upcoming):
         for index in (1, 2):
             name = normalize(r.get(f"f{index}_name", ""))
             if name and name != "nan":
-                ids_by_name[name] = fighter_key(r, index)
+                ids_by_name.setdefault(name, set()).add(fighter_key(r, index))
+
+    def historical_id(name):
+        candidates = ids_by_name.get(normalize(name), set())
+        if len(candidates) > 1:
+            raise ValueError(f"Ambiguous historical fighter identity: {name}")
+        return next(iter(candidates)) if candidates else normalize(name)
+
     results = []
     for _, row in future.iterrows():
         day = row.event_date.date()
@@ -58,8 +65,7 @@ def run_predictions(history, upcoming):
         name_b = str(row.f2_name).strip()
         if not name_a or not name_b or normalize(name_a) == normalize(name_b):
             raise ValueError("Upcoming bout must have two different names")
-        keys = (ids_by_name.get(normalize(name_a), normalize(name_a)),
-                ids_by_name.get(normalize(name_b), normalize(name_b)))
+        keys = (historical_id(name_a), historical_id(name_b))
         s1 = snap(states[keys[0]] if keys[0] in states else empty_state(), day)
         s2 = snap(states[keys[1]] if keys[1] in states else empty_state(), day)
         diff = {
