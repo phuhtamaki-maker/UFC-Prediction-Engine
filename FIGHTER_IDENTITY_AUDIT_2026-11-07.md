@@ -20,3 +20,6 @@ This is a name-to-ID collision, **not** evidence of a wrong prediction or mistak
 Run `python identity_audit.py --before 2026-11-07` on the same dataset version to reproduce. The upstream CSV is downloaded from a mutable URL, so results could change as upstream data changes. The run's uploaded `fighter-identity-audit` artifact preserves the JSON report, but does not pin the source CSV hash. Future work should record the dataset SHA-256 and publication snapshot; historical cutoff by bout date is not a substitute for proving point-in-time availability.
 
 No model features, weights, forecast probabilities, or betting claims were changed by this audit.
+
+## Input fingerprint improvement
+The audit script now records `source_history_sha256` and `exclusive_cutoff` in each new JSON report. This helps detect upstream data changes between executions; it does not itself prove that data was available before a historical fight.
