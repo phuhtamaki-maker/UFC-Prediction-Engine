@@ -20,6 +20,11 @@ def build_value_report(frame, min_edge=0.05):
         min_edge=min_edge,
     )
     result["provenance_checked_rows"] = len(data)
+    result["odds_recorded_before_prediction"] = int((data["odds_time"] < data["prediction_time"]).sum())
+    result["price_timing_warning"] = (
+        "Odds recorded before prediction may be stale at decision time. "
+        "Confirm quoted prices were still executable; timestamp checks alone cannot prove this."
+    )
     result["provenance_limit"] = (
         "Timestamps and source fields are supplied by the dataset; this gate "
         "does not independently authenticate their historical availability."
