@@ -20,6 +20,9 @@ def build_value_report(frame, min_edge=0.05):
         min_edge=min_edge,
     )
     result["provenance_checked_rows"] = len(data)
+    result["evaluation_type"] = "retrospective_research_not_live_betting"
+    result["live_betting_profit_verified"] = False
+    result["data_authenticity_independently_verified"] = False
     result["bet_coverage"] = round(result["bets"] / len(data), 4) if len(data) else 0.0
     result["minimum_sample_warning"] = (
         "Small number of bets; realized ROI is highly uncertain and must not "
