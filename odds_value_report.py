@@ -29,10 +29,9 @@ def build_value_report(frame, min_edge=0.05):
         "be interpreted as a demonstrated edge."
         if result["bets"] < 100 else None
     )
-    result["odds_recorded_before_prediction"] = int((data["odds_time"] < data["prediction_time"]).sum())
     result["price_timing_warning"] = (
-        "Odds recorded before prediction may be stale at decision time. "
-        "Confirm quoted prices were still executable; timestamp checks alone cannot prove this."
+        "Only odds recorded at or after the frozen prediction are accepted. "
+        "Timestamps alone do not prove prices were executable at decision time."
     )
     result["provenance_limit"] = (
         "Timestamps and source fields are supplied by the dataset; this gate "
