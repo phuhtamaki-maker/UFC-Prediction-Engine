@@ -25,6 +25,9 @@ class OddsValueReportTests(unittest.TestCase):
     def test_valid_row_reports_profit(self):
         result = build_value_report(pd.DataFrame([row()]))
         self.assertEqual(result["provenance_checked_rows"], 1)
+        self.assertEqual(result["evaluation_type"], "retrospective_research_not_live_betting")
+        self.assertFalse(result["live_betting_profit_verified"])
+        self.assertFalse(result["data_authenticity_independently_verified"])
         self.assertEqual(result["bets"], 1)
         self.assertEqual(result["profit_units"], 1.0)
         self.assertEqual(result["realized_roi"], 1.0)
