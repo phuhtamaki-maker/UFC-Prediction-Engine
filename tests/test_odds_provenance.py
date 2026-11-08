@@ -17,6 +17,10 @@ def example():
 
 
 class OddsProvenanceTests(unittest.TestCase):
+    def test_empty_dataset_rejected(self):
+        with self.assertRaisesRegex(ValueError, "No historical bouts"):
+            validate_odds_history(example().iloc[0:0])
+
     def test_valid_pre_fight_row(self):
         self.assertEqual(len(validate_odds_history(example())), 1)
 
