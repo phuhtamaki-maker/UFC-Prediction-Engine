@@ -52,6 +52,18 @@ class ArchiveValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "predictions_sha256"):
             validate_archive_metadata(data)
 
+    def test_padded_feature_name_rejected(self):
+        data = valid()
+        data["model_features"] = ["elo_diff", " age_diff "]
+        with self.assertRaisesRegex(ValueError, "model_features"):
+            validate_archive_metadata(data)
+
+    def test_whitespace_alias_duplicate_rejected(self):
+        data = valid()
+        data["model_features"] = ["elo_diff", " elo_diff "]
+        with self.assertRaisesRegex(ValueError, "model_features"):
+            validate_archive_metadata(data)
+
     def test_duplicate_features_rejected(self):
         data = valid()
         data["model_features"] = ["elo_diff", "elo_diff"]
