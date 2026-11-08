@@ -48,6 +48,14 @@ class OddsProvenanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "odds_time"):
             validate_odds_history(data)
 
+    def test_timezone_naive_timestamps_rejected(self):
+        for field in ("event_time", "prediction_time", "odds_time"):
+            with self.subTest(field=field):
+                data = example()
+                data.loc[0, field] = "2025-01-01T19:00:00"
+                with self.assertRaisesRegex(ValueError, "timezone-naive"):
+                    validate_odds_history(data)
+
     def test_duplicate_bout_rejected(self):
         data = pd.concat([example(), example()], ignore_index=True)
         with self.assertRaisesRegex(ValueError, "Duplicate"):
