@@ -18,6 +18,19 @@ class UpcomingTests(unittest.TestCase):
                           "result_f2":"L" if i%2 else "W"})
         return pd.DataFrame(bouts)
 
+    def test_empty_card_rejected(self):
+        card = pd.DataFrame(columns=["event_date", "f1_name", "f2_name"])
+        with self.assertRaisesRegex(ValueError, "at least one bout"):
+            run_predictions(self.historical(), card)
+
+    def test_missing_fighter_name_rejected(self):
+        for bad_name in (None, float("nan"), "  "):
+            with self.subTest(name=bad_name):
+                card = pd.DataFrame([{"event_date": "2024-02-01",
+                                      "f1_name": "A", "f2_name": bad_name}])
+                with self.assertRaisesRegex(ValueError, "two different names"):
+                    run_predictions(self.historical(), card)
+
     def test_probabilities_sum_to_one(self):
         card = pd.DataFrame([
             {"event_date":"2024-02-01","f1_name":"A","f2_name":"C"},
