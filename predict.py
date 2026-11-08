@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from engine import FEATURES, prepared_rows, fighter_key, empty_state, snap, num, train_model
 from calibration import apply_temperature, fit_temperature
+from forecast_validation import validate_forecast_rows
 
 
 def normalize(name):
@@ -93,7 +94,9 @@ def run_predictions(history, upcoming):
                         "calibration_status": "validation-year calibrated" if calibrated else "NOT calibrated (insufficient history)",
                         "warning": "Limited UFC history" if min(s1["bouts"], s2["bouts"]) < 3
                         else "Experimental probability; independent calibration pending"})
-    return pd.DataFrame(results)
+    forecast = pd.DataFrame(results)
+    validate_forecast_rows(forecast)
+    return forecast
 
 
 def main():
