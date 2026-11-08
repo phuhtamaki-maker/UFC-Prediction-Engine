@@ -35,6 +35,8 @@ def validate_odds_history(frame):
     if ((data["prediction_time"] >= data["event_time"]) |
             (data["odds_time"] >= data["event_time"])).any():
         raise ValueError("Prediction and odds must predate event")
+    if (data["odds_time"] < data["prediction_time"]).any():
+        raise ValueError("Odds must be recorded at or after the frozen prediction time")
     if not data["fighter1_won"].isin([0, 1]).all():
         raise ValueError("Only settled binary outcomes supported")
     # Prevent accidental non-numeric input or silently accepting missing prices.
