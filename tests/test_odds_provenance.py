@@ -61,6 +61,12 @@ class OddsProvenanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Duplicate"):
             validate_odds_history(data)
 
+    def test_whitespace_duplicate_bout_rejected(self):
+        data = pd.concat([example(), example()], ignore_index=True)
+        data.loc[1, "bout_id"] = "  event-1-fight-1  "
+        with self.assertRaisesRegex(ValueError, "Duplicate bout identity"):
+            validate_odds_history(data)
+
     def test_missing_bookmaker_rejected(self):
         data = example()
         data.loc[0, "bookmaker"] = ""
