@@ -23,6 +23,8 @@ def validate_odds_history(frame):
         raise ValueError("No historical bouts to evaluate")
     if data["bout_id"].isna().any() or data["bout_id"].astype(str).str.strip().eq("").any():
         raise ValueError("Missing bout identity")
+    # Normalize incidental whitespace before uniqueness checks to prevent double counting.
+    data["bout_id"] = data["bout_id"].astype(str).str.strip()
     if data["bout_id"].duplicated().any():
         raise ValueError("Duplicate bout identity")
     for field in ("model_commit", "bookmaker", "fighter1_id", "fighter2_id"):
