@@ -31,6 +31,11 @@ def validate_odds_history(frame):
     if (data["fighter1_id"].astype(str) == data["fighter2_id"].astype(str)).any():
         raise ValueError("Fighter IDs must differ")
     for field in ("event_time", "prediction_time", "odds_time"):
+        # Naive timestamps are silently interpreted as UTC by pandas; reject them.
+        parsed = [pd.to_datetime(value, errors="coerce") for value in data[field]]
+        if any(pd.isna(value) or value.tzinfo is None or value.utcoffset() is None
+               for value in parsed):
+            raise ValueError(f"Missing, invalid or timezone-naive {field}")
         data[field] = pd.to_datetime(data[field], utc=True, errors="coerce")
         if data[field].isna().any():
             raise ValueError(f"Missing or invalid {field}")
