@@ -21,10 +21,17 @@ class UpcomingTests(unittest.TestCase):
     def test_probabilities_sum_to_one(self):
         card = pd.DataFrame([
             {"event_date":"2024-02-01","f1_name":"A","f2_name":"C"},
-            {"event_date":"2024-02-01","f1_name":"C","f2_name":"A"}])
+            {"event_date":"2024-02-01","f1_name":"B","f2_name":"D"}])
         predictions = run_predictions(self.historical(), card)
-        self.assertAlmostEqual(predictions.iloc[0].p_fighter_1 +
-                               predictions.iloc[1].p_fighter_1, 1, places=3)
+        for _, row in predictions.iterrows():
+            self.assertAlmostEqual(row.p_fighter_1 + row.p_fighter_2, 1, places=3)
+
+    def test_duplicate_reversed_bout_is_rejected(self):
+        card = pd.DataFrame([
+            {"event_date":"2024-02-01","f1_name":"A","f2_name":"C"},
+            {"event_date":"2024-02-01","f1_name":"C","f2_name":"A"}])
+        with self.assertRaisesRegex(ValueError, "Duplicate forecast bout"):
+            run_predictions(self.historical(), card)
 
     def test_future_results_are_excluded(self):
         past = self.historical()
