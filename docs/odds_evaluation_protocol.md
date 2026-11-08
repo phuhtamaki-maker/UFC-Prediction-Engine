@@ -16,3 +16,6 @@ Passing unit tests does not establish that historical odds existed or were obtai
 No verified historical ROI is available from this branch yet. Do not use these outputs to justify real-money stakes.
 
 Next implementation: create a timestamped, provenance-checked evaluation dataset and an independent untouched holdout report.
+
+## Strict price-timing rule
+The report rejects an entire dataset if any odds timestamp predates the corresponding frozen prediction timestamp. This conservative rule can exclude legitimate earlier quotes, but avoids treating stale prices as executable. Prices must still be independently verified as obtainable at the decision time.
