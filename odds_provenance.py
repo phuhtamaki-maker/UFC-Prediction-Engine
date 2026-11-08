@@ -19,6 +19,8 @@ def validate_odds_history(frame):
     if missing:
         raise ValueError(f"Missing provenance columns: {missing}")
     data = frame.copy()
+    if data.empty:
+        raise ValueError("No historical bouts to evaluate")
     if data["bout_id"].isna().any() or data["bout_id"].astype(str).str.strip().eq("").any():
         raise ValueError("Missing bout identity")
     if data["bout_id"].duplicated().any():
