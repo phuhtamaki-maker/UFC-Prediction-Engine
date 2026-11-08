@@ -26,6 +26,12 @@ class OddsProvenanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "predate"):
             validate_odds_history(data)
 
+    def test_odds_before_prediction_rejected(self):
+        data = example()
+        data.loc[0, "odds_time"] = "2025-01-01T17:00:00Z"
+        with self.assertRaisesRegex(ValueError, "at or after"):
+            validate_odds_history(data)
+
     def test_odds_at_event_rejected(self):
         data = example()
         data.loc[0, "odds_time"] = data.loc[0, "event_time"]
