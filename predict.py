@@ -21,6 +21,11 @@ def run_predictions(history, upcoming):
     required = {"event_date", "f1_name", "f2_name"}
     if not required <= set(upcoming.columns):
         raise ValueError("Upcoming card must contain event_date,f1_name,f2_name")
+    if upcoming.empty:
+        raise ValueError("Upcoming card must contain at least one bout")
+    for column in ("f1_name", "f2_name"):
+        if upcoming[column].isna().any() or upcoming[column].astype(str).str.strip().eq("").any():
+            raise ValueError("Upcoming bout must have two different names")
     future = upcoming.copy()
     future["event_date"] = pd.to_datetime(future.event_date, errors="coerce")
     if future.event_date.isna().any():
