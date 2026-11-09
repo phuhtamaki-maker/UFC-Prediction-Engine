@@ -100,6 +100,37 @@ class FrozenScoringTests(unittest.TestCase):
         result = score(self.frozen, self.manifest, self.results)
         self.assertTrue(result["snapshot_chronology_checked"])
 
+    def test_exact_fifty_fifty_is_no_directional_pick(self):
+        df = pd.read_csv(self.frozen)
+        df.loc[0, ["p_fighter_1", "p_fighter_2"]] = [0.5, 0.5]
+        df.to_csv(self.frozen, index=False)
+        data = json.loads(self.manifest.read_text())
+        data["predictions_sha256"] = file_sha256(self.frozen)
+        self.manifest.write_text(json.dumps(data))
+        result = score(self.frozen, self.manifest, self.results)
+        self.assertEqual(result["completed_scored"], 1)
+        self.assertEqual(result["directional_picks"], 0)
+        self.assertEqual(result["ties"], 1)
+        self.assertEqual(result["correct"], 0)
+        self.assertIsNone(result["accuracy"])
+        self.assertEqual(result["accuracy_95pct_wilson_interval"], [None, None])
+        self.assertEqual(result["fights"][0]["winner_pick"], "no_pick")
+        self.assertAlmostEqual(result["brier"], 0.25)
+        self.assertAlmostEqual(result["log_loss"], 0.6931)
+
+    def test_fifty_fifty_reversed_order_stays_no_pick(self):
+        df = pd.read_csv(self.frozen)
+        df.loc[0, ["fighter_1", "fighter_2"]] = ["Fighter B", "Fighter A"]
+        df.loc[0, ["p_fighter_1", "p_fighter_2"]] = [0.5, 0.5]
+        df.to_csv(self.frozen, index=False)
+        data = json.loads(self.manifest.read_text())
+        data["predictions_sha256"] = file_sha256(self.frozen)
+        self.manifest.write_text(json.dumps(data))
+        result = score(self.frozen, self.manifest, self.results)
+        self.assertEqual(result["directional_picks"], 0)
+        self.assertEqual(result["ties"], 1)
+        self.assertIsNone(result["accuracy"])
+
     def test_invalid_probability_rejected(self):
         df = pd.read_csv(self.frozen)
         df.loc[0, "p_fighter_1"] = .90
