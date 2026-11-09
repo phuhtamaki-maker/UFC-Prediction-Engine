@@ -45,7 +45,8 @@ def validate_archive_metadata(metadata):
             raise ValueError(f"Invalid {field}")
     if not isinstance(metadata.get("model_features"), list) or not metadata["model_features"]:
         raise ValueError("Missing model_features")
-    if any(not isinstance(item, str) or not item.strip() for item in metadata["model_features"]):
+    if any(not isinstance(item, str) or not item.strip() or item != item.strip()
+           for item in metadata["model_features"]):
         raise ValueError("Invalid model_features")
     if len(set(metadata["model_features"])) != len(metadata["model_features"]):
         raise ValueError("Duplicate model_features")
