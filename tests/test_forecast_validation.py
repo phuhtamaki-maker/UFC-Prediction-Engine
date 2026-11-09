@@ -42,6 +42,14 @@ class ForecastValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "fighter names"):
             validate_forecast_rows(frame)
 
+    def test_reject_non_iso_dates_and_numeric_values(self):
+        for invalid in (20261114, 0, "11/14/2026", "2026-11-14T00:00:00", "2026-02-30", "2026-1-4"):
+            with self.subTest(date=invalid):
+                frame = example()
+                frame.at[0, "date"] = invalid
+                with self.assertRaisesRegex(ValueError, "date"):
+                    validate_forecast_rows(frame)
+
     def test_invalid_date(self):
         frame = example()
         frame.loc[0, "date"] = "not a date"
