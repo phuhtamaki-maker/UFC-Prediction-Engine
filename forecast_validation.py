@@ -3,6 +3,7 @@
 This validates structure and arithmetic, not provenance or predictive accuracy.
 """
 import math
+import re
 import pandas as pd
 
 REQUIRED = ("date", "fighter_1", "fighter_2", "p_fighter_1", "p_fighter_2")
@@ -24,7 +25,10 @@ def validate_forecast_rows(frame):
         raise ValueError("Empty forecast")
     seen = set()
     for _, row in frame.iterrows():
-        date = pd.to_datetime(row["date"], errors="coerce")
+        raw_date = row["date"]
+        if not isinstance(raw_date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw_date):
+            raise ValueError("Invalid forecast date: expected YYYY-MM-DD")
+        date = pd.to_datetime(raw_date, format="%Y-%m-%d", errors="coerce")
         if pd.isna(date):
             raise ValueError("Invalid forecast date")
         a, b = _name(row["fighter_1"]), _name(row["fighter_2"])
