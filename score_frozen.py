@@ -30,8 +30,17 @@ def normalize(value):
                             and (ch.isalnum() or ch.isspace())).split())
 
 
+def strict_event_date(value):
+    """Reject ambiguous or noncanonical dates before joining fight records."""
+    if (not isinstance(value, str) or len(value) != 10
+            or value[4] != "-" or value[7] != "-"
+            or not all("0" <= ch <= "9" for ch in value[:4] + value[5:7] + value[8:])):
+        raise ValueError("Event date must use YYYY-MM-DD")
+    return dt.date.fromisoformat(value).isoformat()
+
+
 def key(date, one, two):
-    day = pd.to_datetime(date, errors="raise").date().isoformat()
+    day = strict_event_date(date)
     names = (normalize(one), normalize(two))
     if not all(names) or names[0] == names[1]:
         raise ValueError("Invalid or identical fighter names")
@@ -70,8 +79,8 @@ def score(frozen_csv, manifest_json, completed_csv):
     if not needed <= set(frozen.columns):
         raise ValueError("Frozen data lacks required columns")
     if generated is not None:
-        event_days = pd.to_datetime(frozen["date"], errors="coerce")
-        if event_days.isna().any() or (event_days.dt.date < cutoff.date()).any():
+        event_days = frozen["date"].map(strict_event_date)
+        if (event_days < cutoff.date().isoformat()).any():
             raise ValueError("Frozen card contains event before UTC cutoff date")
     completed = pd.read_csv(completed_csv, dtype={"event_date": "str"})
     required = {"event_date", "f1_name", "f2_name", "result_f1", "result_f2"}
