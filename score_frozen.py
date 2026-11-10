@@ -114,10 +114,17 @@ def score(frozen_csv, manifest_json, completed_csv):
                 state = "non_decisive_or_not_complete"
         details.append({"date": str(pred.date), "fighter_1": str(pred.fighter_1),
                         "fighter_2": str(pred.fighter_2), "status": state,
-                        "p_fighter_1": a, "actual_fighter_1_win": actual})
+                        "p_fighter_1": a, "actual_fighter_1_win": actual,
+                        "winner_pick": ("no_pick" if a == 0.5 else
+                                        ("fighter_1" if a > 0.5 else "fighter_2")) if state == "scored" else None})
     total = len(frozen)
     counted = len(y)
-    correct = int(sum((np.array(p) >= 0.5) == np.array(y))) if counted else 0
+    # Exact 50/50 forecasts are probability estimates, not directional picks.
+    # Retain them in coverage and proper scoring rules, but not pick accuracy.
+    directional = [(prob, outcome) for prob, outcome in zip(p, y) if prob != 0.5]
+    picks = len(directional)
+    ties = counted - picks
+    correct = sum((prob > 0.5) == bool(outcome) for prob, outcome in directional)
     return {
         "manifest_sha256": file_sha256(manifest_json),
         "frozen_predictions_sha256": manifest["predictions_sha256"],
@@ -130,8 +137,10 @@ def score(frozen_csv, manifest_json, completed_csv):
         "excluded_or_unmatched": total - counted,
         "coverage": round(counted / total, 4) if total else 0,
         "correct": correct,
-        "accuracy": round(correct / counted, 4) if counted else None,
-        "accuracy_95pct_wilson_interval": wilson_interval(correct, counted),
+        "directional_picks": picks,
+        "ties": ties,
+        "accuracy": round(correct / picks, 4) if picks else None,
+        "accuracy_95pct_wilson_interval": wilson_interval(correct, picks),
         "confidence_diagnostics": confidence_report(y, p, thresholds=(0.6, 0.7, 0.8)),
         "brier": round(float(brier_score_loss(y, p)), 4) if counted else None,
         "log_loss": round(float(log_loss(y, np.clip(p, 1e-6, 1 - 1e-6), labels=[0, 1])), 4) if counted else None,
