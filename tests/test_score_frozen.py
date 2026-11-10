@@ -131,6 +131,34 @@ class FrozenScoringTests(unittest.TestCase):
         self.assertEqual(result["ties"], 1)
         self.assertIsNone(result["accuracy"])
 
+    def test_mixed_tie_correct_and_incorrect_directional_picks(self):
+        # Three completed fights: one neutral 50/50, one wrong pick, one right pick.
+        df = pd.read_csv(self.frozen)
+        df.loc[0, ["p_fighter_1", "p_fighter_2"]] = [0.5, 0.5]
+        df.to_csv(self.frozen, index=False)
+        manifest = json.loads(self.manifest.read_text())
+        manifest["predictions_sha256"] = file_sha256(self.frozen)
+        self.manifest.write_text(json.dumps(manifest))
+        pd.DataFrame([
+            dict(event_date="2026-11-07", f1_name="Fighter A",
+                 f2_name="Fighter B", result_f1="W", result_f2="L"),
+            dict(event_date="2026-11-07", f1_name="Fighter C",
+                 f2_name="Fighter D", result_f1="W", result_f2="L"),
+            dict(event_date="2026-11-07", f1_name="Fighter E",
+                 f2_name="Fighter F", result_f1="W", result_f2="L"),
+        ]).to_csv(self.results, index=False)
+        result = score(self.frozen, self.manifest, self.results)
+        self.assertEqual(result["total_frozen"], 3)
+        self.assertEqual(result["completed_scored"], 3)
+        self.assertEqual(result["directional_picks"], 2)
+        self.assertEqual(result["ties"], 1)
+        self.assertEqual(result["correct"], 1)
+        self.assertEqual(result["accuracy"], 0.5)
+        self.assertEqual(result["coverage"], 1.0)
+        self.assertEqual(result["excluded_or_unmatched"], 0)
+        self.assertEqual([fight["winner_pick"] for fight in result["fights"]],
+                         ["no_pick", "fighter_2", "fighter_1"])
+
     def test_invalid_probability_rejected(self):
         df = pd.read_csv(self.frozen)
         df.loc[0, "p_fighter_1"] = .90
