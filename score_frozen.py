@@ -139,6 +139,8 @@ def score(frozen_csv, manifest_json, completed_csv):
         "frozen_predictions_sha256": manifest["predictions_sha256"],
         "github_forecast_run": manifest.get("github_run_id"),
         "snapshot_chronology_checked": generated is not None,
+        # Date-only fight records do not prove actual bout start times.
+        "bout_start_chronology_verified": False,
         "generated_utc": generated_text,
         "cutoff_utc": cutoff_text,
         "total_frozen": total,
