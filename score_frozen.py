@@ -78,6 +78,8 @@ def score(frozen_csv, manifest_json, completed_csv):
     needed = {"date", "fighter_1", "fighter_2", "p_fighter_1", "p_fighter_2"}
     if not needed <= set(frozen.columns):
         raise ValueError("Frozen data lacks required columns")
+    if "bout_start_utc" in frozen.columns and generated is None:
+        raise ValueError("bout_start_utc requires generated_utc and cutoff_utc")
     if generated is not None:
         event_days = frozen["date"].map(strict_event_date)
         if "bout_start_utc" in frozen.columns:
