@@ -145,6 +145,16 @@ class FrozenScoringTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     score(self.frozen, self.manifest, self.results)
 
+    def test_bout_start_requires_manifest_chronology(self):
+        df = pd.read_csv(self.frozen)
+        df["bout_start_utc"] = "2026-11-07T15:00:00Z"
+        df.to_csv(self.frozen, index=False)
+        data = json.loads(self.manifest.read_text())
+        data["predictions_sha256"] = file_sha256(self.frozen)
+        self.manifest.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, "requires generated_utc and cutoff_utc"):
+            score(self.frozen, self.manifest, self.results)
+
     def test_exact_fifty_fifty_is_no_directional_pick(self):
         df = pd.read_csv(self.frozen)
         df.loc[0, ["p_fighter_1", "p_fighter_2"]] = [0.5, 0.5]
