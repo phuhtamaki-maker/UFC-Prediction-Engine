@@ -99,6 +99,8 @@ class FrozenScoringTests(unittest.TestCase):
         self.manifest.write_text(json.dumps(data))
         result = score(self.frozen, self.manifest, self.results)
         self.assertTrue(result["snapshot_chronology_checked"])
+        # UTC manifest timestamps do not establish the actual bout start.
+        self.assertFalse(result["bout_start_chronology_verified"])
 
     def test_exact_fifty_fifty_is_no_directional_pick(self):
         df = pd.read_csv(self.frozen)
