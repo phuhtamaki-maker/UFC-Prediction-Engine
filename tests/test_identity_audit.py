@@ -35,6 +35,20 @@ class FighterIdentityAuditTests(unittest.TestCase):
         self.assertEqual(report["ambiguous_names"], 0)
         self.assertEqual(report["ambiguous_name_occurrences"], {})
 
+    def test_ambiguous_slash_dates_are_excluded(self):
+        data = pd.DataFrame([
+            {"event_date": "07/11/2026", "f1_name": "Alex", "f1_id": "ambiguous-a",
+             "f2_name": "Bob", "f2_id": "bob"},
+            {"event_date": "11/07/2026", "f1_name": "Alex", "f1_id": "ambiguous-b",
+             "f2_name": "Bob", "f2_id": "bob"},
+            {"event_date": "2026-11-07", "f1_name": "Alex", "f1_id": "valid",
+             "f2_name": "Bob", "f2_id": "bob"},
+        ])
+        report = audit_identities(data, "2026-11-08")
+        self.assertEqual(report["invalid_date_rows_excluded"], 2)
+        self.assertEqual(report["historical_bouts"], 1)
+        self.assertEqual(report["ambiguous_names"], 0)
+
     def test_repeated_same_id_is_not_ambiguous(self):
         data = pd.DataFrame([
             {"event_date": "2024-01-01", "f1_name": "Bruno Silva", "f1_id": "fighter-a",

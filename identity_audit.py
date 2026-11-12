@@ -19,7 +19,7 @@ def audit_identities(history, cutoff=None):
     if missing:
         raise ValueError(f"Missing columns: {sorted(missing)}")
     data = history.copy()
-    data["event_date"] = pd.to_datetime(data["event_date"], errors="coerce")
+    data["event_date"] = pd.to_datetime(data["event_date"], format="%Y-%m-%d", errors="coerce")
     invalid_dates = int(data["event_date"].isna().sum())
     data = data.dropna(subset=["event_date"])
     if cutoff is not None:
