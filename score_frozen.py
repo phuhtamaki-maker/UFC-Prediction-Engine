@@ -78,9 +78,19 @@ def score(frozen_csv, manifest_json, completed_csv):
     needed = {"date", "fighter_1", "fighter_2", "p_fighter_1", "p_fighter_2"}
     if not needed <= set(frozen.columns):
         raise ValueError("Frozen data lacks required columns")
+    if "bout_start_utc" in frozen.columns and generated is None:
+        raise ValueError("bout_start_utc requires generated_utc and cutoff_utc")
     if generated is not None:
         event_days = frozen["date"].map(strict_event_date)
-        if (event_days < cutoff.date().isoformat()).any():
+        if "bout_start_utc" in frozen.columns:
+            # Explicit timezone-aware instants supersede ambiguous local dates.
+            if frozen["bout_start_utc"].isna().any():
+                raise ValueError("bout_start_utc must be present for every bout")
+            starts = frozen["bout_start_utc"].map(moment)
+            if any(start <= cutoff for start in starts):
+                raise ValueError("Bout start must be strictly after forecast cutoff")
+        elif (event_days < cutoff.date().isoformat()).any():
+            # Preserve the legacy guard for date-only frozen archives.
             raise ValueError("Frozen card contains event before UTC cutoff date")
     completed = pd.read_csv(completed_csv, dtype={"event_date": "str"})
     required = {"event_date", "f1_name", "f2_name", "result_f1", "result_f2"}
